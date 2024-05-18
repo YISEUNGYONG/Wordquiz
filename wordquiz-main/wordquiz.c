@@ -148,7 +148,7 @@ void run_test ()
 
 	int n_questions = 0 ;
 	int n_correct = 0 ; 
-
+	/*modify below to Make quiz randomly show the list of vocabularies. additionally make quiz not only answering Korean meaning but also answering on English.*/
 	char * line ;
 	while (line = read_a_line(fp)) {
 		char * word = strtok(line, "\"") ;
