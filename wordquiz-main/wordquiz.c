@@ -66,7 +66,7 @@ char * read_a_line (FILE * fp)
 
 
 void print_menu() {
-
+	/*add ASCII ARTS here to modify menu*/
 	printf("1. List all wordbooks\n") ;
 	printf("2. Show the words in a wordbook\n") ;
 	printf("3. Test with a wordbook\n") ;
@@ -168,12 +168,12 @@ void run_test ()
 		else {
 			printf("- wrong: %s\n", word) ;
 		}
-
+		/*add progress bar code here to show the progress of the quiz.*/
 		n_questions++ ;
 		free(line) ;
 	}
 
-	printf("(%d/%d)\n", n_correct, n_questions) ;
+	printf("(%d/%d)\n", n_correct, n_questions) ; // modify this line to express score with some phrases, for example, if you get all words right, quiz will show you "5/5 You did a great job!!"
 
 	printf("-----\n\n") ;
 
