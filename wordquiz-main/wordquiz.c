@@ -130,6 +130,10 @@ void show_words ()
 	fclose(fp) ;
 }
 
+void save_incorrect(char *word, char *meaning, FILE *fp) {
+    /* Function to save incorrect problem to a file */
+    fprintf(fp, "\"%s\" : \"%s\"\n", word, meaning);
+}
 
 void run_test ()
 {
@@ -148,6 +152,12 @@ void run_test ()
 
 	int n_questions = 0 ;
 	int n_correct = 0 ; 
+
+    FILE *incorrect_fp;
+    char incorrect_filepath[256];
+    sprintf(incorrect_filepath, "incorrect_%s", wordbook);
+    incorrect_fp = fopen(incorrect_filepath, "w");
+
 	/*modify below to Make quiz randomly show the list of vocabularies. additionally make quiz not only answering Korean meaning but also answering on English.*/
 	char * line ;
 	while (line = read_a_line(fp)) {
@@ -167,19 +177,38 @@ void run_test ()
 		}
 		else {
 			printf("- wrong: %s\n", word) ;
+			save_incorrect(word, meaning, incorrect_fp);
 		}
 		/*add progress bar code here to show the progress of the quiz.*/
 		n_questions++ ;
 		free(line) ;
 	}
 
-	printf("(%d/%d)\n", n_correct, n_questions) ; // modify this line to express score with some phrases, for example, if you get all words right, quiz will show you "5/5 You did a great job!!"
+    fclose(incorrect_fp);
+
+	printf("(%d/%d)\n", n_correct, n_questions) ; 
+	// modify this line to express score with some phrases, for example, 
+	//if you get all words right, quiz will show you "5/5 You did a great job!!"
 
 	printf("-----\n\n") ;
 
 	fclose(fp) ;
 }
-//Implement functions that add incorrect problem storage and retest capabilities
+
+void retest_incorrect(char *wordbook) {
+    /* Function to retest incorrect questions from a file */
+    char filepath[256];
+    sprintf(filepath, "incorrect_%s", wordbook);
+
+    FILE *fp = fopen(filepath, "r");
+    if (fp == NULL) {
+        printf("No incorrect questions found.\n");
+        return;
+    }
+
+    run_test();
+    fclose(fp);
+}
 
 int main ()
 {
@@ -210,6 +239,15 @@ int main ()
 			case C_EXIT: {
 				return EXIT_SUCCESS ;
 			}
+
+            case 9: { // Assuming 9 is the command to retest incorrect questions
+                char wordbook[128];
+                printf("Type in the name of the wordbook for retesting incorrect questions?\n");
+                printf("> ");
+                scanf("%s", wordbook);
+                retest_incorrect(wordbook);
+                break;
+            }
 		}
 	}
 	while (cmd != C_EXIT) ;
