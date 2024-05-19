@@ -4,254 +4,295 @@
 #include <dirent.h>
 #include <ctype.h>
 
-/* Hi */
+typedef enum {
+    C_ZERO,
+    C_LIST,
+    C_SHOW,
+    C_TEST,
+    C_RETEST,
+    C_EXIT,
+} command_t;
 
-typedef 
-	enum {
-		C_ZERO,
-		C_LIST,
-		C_SHOW,
-		C_TEST,
-		C_EXIT,
-	}
-	command_t ;
+char* read_a_line(FILE* fp) {
+    static char buf[BUFSIZ];
+    static int buf_n = 0;
+    static int curr = 0;
 
+    if (feof(fp) && curr == buf_n - 1)
+        return 0x0;
 
-char * read_a_line (FILE * fp)
-{
-	static char buf[BUFSIZ] ;
-	static int buf_n = 0 ;
-	static int curr = 0 ;
+    char* s = 0x0;
+    size_t s_len = 0;
+    do {
+        int end = curr;
+        while (!(end >= buf_n || !iscntrl(buf[end]))) {
+            end++;
+        }
+        if (curr < end && s != 0x0) {
+            curr = end;
+            break;
+        }
+        curr = end;
+        while (!(end >= buf_n || iscntrl(buf[end]))) {
+            end++;
+        }
+        if (curr < end) {
+            if (s == 0x0) {
+                s = strndup(buf + curr, end - curr);
+                s_len = end - curr;
+            } else {
+                s = realloc(s, s_len + end - curr + 1);
+                s = strncat(s, buf + curr, end - curr);
+                s_len = s_len + end - curr;
+            }
+        }
+        if (end < buf_n) {
+            curr = end + 1;
+            break;
+        }
 
-	if (feof(fp) && curr == buf_n - 1)
-		return 0x0 ;
-
-	char * s = 0x0 ;
-	size_t s_len = 0 ;
-	do {
-		int end = curr ;
-		while (!(end >= buf_n || !iscntrl(buf[end]))) {
-			end++ ;
-		}
-		if (curr < end && s != 0x0) {
-			curr = end ;
-			break ;
-		}
-		curr = end ;
-		while (!(end >= buf_n || iscntrl(buf[end]))) {
-			end++ ;
-		}
-		if (curr < end) {
-			if (s == 0x0) {
-				s = strndup(buf + curr, end - curr) ;
-				s_len = end - curr ;
-			}
-			else {
-				s = realloc(s, s_len + end - curr + 1) ;
-				s = strncat(s, buf + curr, end - curr) ;
-				s_len = s_len + end - curr ;
-			}
-		}
-		if (end < buf_n) {
-			curr = end + 1 ;
-			break ;
-		}
-
-		buf_n = fread(buf, 1, sizeof(buf), fp) ;
-		curr = 0 ;
-	} while (buf_n > 0) ;
-	return s ;
+        buf_n = fread(buf, 1, sizeof(buf), fp);
+        curr = 0;
+    } while (buf_n > 0);
+    return s;
 }
 
-
-
 void print_menu() {
-	/*add ASCII ARTS here to modify menu*/
-	printf("1. List all wordbooks\n") ;
-	printf("2. Show the words in a wordbook\n") ;
-	printf("3. Test with a wordbook\n") ;
-	printf("4. Exit\n") ;
+    printf("1. List all wordbooks\n");
+    printf("2. Show the words in a wordbook\n");
+    printf("3. Test with a wordbook\n");
+    printf("4. Retest incorrect problems\n");
+    printf("5. Exit\n");
 }
 
 int get_command() {
-	int cmd ;
+    int cmd;
 
-	printf(">") ;
-	scanf("%d", &cmd) ;
-	return cmd ;
+    printf(">");
+    scanf("%d", &cmd);
+    return cmd;
 }
 
-void list_wordbooks ()
-{
+void list_wordbooks() {
+    DIR* d = opendir("wordbooks");
 
-	DIR * d = opendir("wordbooks") ;
-	
-	printf("\n  ----\n") ;
+    printf("\n  ----\n");
 
-	struct dirent * wb ;
-	while ((wb = readdir(d)) != NULL) {
-		if (strcmp(wb->d_name, ".") != 0 && strcmp(wb->d_name, "..") !=0) {
-			printf("  %s\n", wb->d_name) ;
-		}
-	}
-	closedir(d) ;
-
-	printf("  ----\n") ;
-}
-
-void show_words ()
-{
-	char wordbook[128] ;
-	char filepath[256] ;
-
-	list_wordbooks() ;
-
-	printf("Type in the name of the wordbook?\n") ;
-	printf(">") ;
-	scanf("%s", wordbook) ;
-
-	sprintf(filepath, "wordbooks/%s", wordbook) ;
-
-	FILE * fp = fopen(filepath, "r") ;
-
-	printf("\n  -----\n") ;
-	char * line ;
-	while (line = read_a_line(fp)) {
-		char * word = strtok(line, "\"") ;
-		strtok(NULL, "\"") ;
-		char * meaning = strtok(NULL, "\"") ;
-
-		printf("  %s : %s\n", word, meaning) ;
-
-		free(line) ;
-	}
-	printf("  -----\n\n") ;
-
-	fclose(fp) ;
-}
-
-void save_incorrect(char *word, char *meaning, FILE *fp) {
-    /* Function to save incorrect problem to a file */
-    fprintf(fp, "\"%s\" : \"%s\"\n", word, meaning);
-}
-
-void run_test ()
-{
-	char wordbook[128] ;
-	char filepath[256] ;
-
-	printf("Type in the name of the wordbook?\n") ;
-	printf(">") ;
-	scanf("%s", wordbook) ;
-
-	sprintf(filepath, "wordbooks/%s", wordbook) ;
-
-	FILE * fp = fopen(filepath, "r") ;
-
-	printf("\n-----\n") ;
-
-	int n_questions = 0 ;
-	int n_correct = 0 ; 
-
-    FILE *incorrect_fp;
-    char incorrect_filepath[256];
-    sprintf(incorrect_filepath, "incorrect_%s", wordbook);
-    incorrect_fp = fopen(incorrect_filepath, "w");
-
-	/*modify below to Make quiz randomly show the list of vocabularies. additionally make quiz not only answering Korean meaning but also answering on English.*/
-	char * line ;
-	while (line = read_a_line(fp)) {
-		char * word = strtok(line, "\"") ;
-		strtok(NULL, "\"") ;
-		char * meaning = strtok(NULL, "\"") ;
-
-		printf("Q. %s\n", meaning) ;
-		printf("?  ") ;
-
-		char answer[128] ;
-		scanf("%s", answer) ;
-
-		if (strcmp(answer, word) == 0) {
-			printf("- correct\n") ;
-			n_correct++ ;
-		}
-		else {
-			printf("- wrong: %s\n", word) ;
-			save_incorrect(word, meaning, incorrect_fp);
-		}
-		/*add progress bar code here to show the progress of the quiz.*/
-		n_questions++ ;
-		free(line) ;
-	}
-
-    fclose(incorrect_fp);
-
-	printf("(%d/%d)\n", n_correct, n_questions) ; 
-	// modify this line to express score with some phrases, for example, 
-	//if you get all words right, quiz will show you "5/5 You did a great job!!"
-
-	printf("-----\n\n") ;
-
-	fclose(fp) ;
-}
-
-void retest_incorrect(char *wordbook) {
-    /* Function to retest incorrect questions from a file */
-    char filepath[256];
-    sprintf(filepath, "incorrect_%s", wordbook);
-
-    FILE *fp = fopen(filepath, "r");
-    if (fp == NULL) {
-        printf("No incorrect questions found.\n");
-        return;
+    struct dirent* wb;
+    while ((wb = readdir(d)) != NULL) {
+        if (strcmp(wb->d_name, ".") != 0 && strcmp(wb->d_name, "..") != 0) {
+            printf("  %s\n", wb->d_name);
+        }
     }
+    closedir(d);
 
-    run_test();
+    printf("  ----\n");
+}
+
+void show_words() {
+    char wordbook[128];
+    char filepath[256];
+
+    list_wordbooks();
+
+    printf("Type in the name of the wordbook?\n");
+    printf(">");
+    scanf("%s", wordbook);
+
+    sprintf(filepath, "wordbooks/%s", wordbook);
+
+    FILE* fp = fopen(filepath, "r");
+
+    printf("\n  -----\n");
+    char* line;
+    while ((line = read_a_line(fp)) != NULL) {
+        char* word = strtok(line, "\"");
+        strtok(NULL, "\"");
+        char* meaning = strtok(NULL, "\"");
+
+        printf("  %s : %s\n", word, meaning);
+
+        free(line);
+    }
+    printf("  -----\n\n");
+
     fclose(fp);
 }
 
-int main ()
-{
-	
-	printf(" *** Word Quiz *** \n\n") ;
+/* Add incorrect problem saving and retesting capabilities:
+   After taking the quiz, add the ability to save the wrong questions and rewatch only the wrong questions. */
+void save_incorrect(char* wordbook, char* word, char* meaning) {
+    char filepath[256];
+    sprintf(filepath, "wordbooks/%s_incorrect.txt", wordbook);
 
-	int cmd ;
-	do {
-		print_menu() ;
+    FILE* fp = fopen(filepath, "a");
+    fprintf(fp, "\"%s\" : \"%s\"\n", word, meaning);
+    fclose(fp);
+}
 
-		cmd = get_command() ;
-		switch (cmd) {
-			case C_LIST : {
-				list_wordbooks() ;
-				break ;
-			}
+void run_test(char* wordbook) {
+    char filepath[256];
+    sprintf(filepath, "wordbooks/%s", wordbook);
 
-			case C_SHOW: {
-				show_words() ;
-				break ;
-			}
+    FILE* fp = fopen(filepath, "r");
 
-			case C_TEST: {
-				run_test() ;
-				break ;
-			}
+    printf("\n-----\n");
 
-			case C_EXIT: {
-				return EXIT_SUCCESS ;
-			}
+    int n_questions = 0;
+    int n_correct = 0;
+    int hint_count = 3;  // Limit the number of hints provided
 
-            case 9: { // Assuming 9 is the command to retest incorrect questions
-                char wordbook[128];
-                printf("Type in the name of the wordbook for retesting incorrect questions?\n");
-                printf("> ");
-                scanf("%s", wordbook);
-                retest_incorrect(wordbook);
+
+    char* line;
+    while ((line = read_a_line(fp)) != NULL) {
+        char* word = strtok(line, "\"");
+        strtok(NULL, "\"");
+        char* meaning = strtok(NULL, "\"");
+
+        char correct_word[128];
+        strcpy(correct_word, word);
+
+        while (1) {
+            printf("Q. %s\n", meaning);
+            printf("?  ");
+
+            char answer[128];
+            scanf("%s", answer);
+
+            if (strcmp(answer, "hint") == 0) {
+                if (hint_count > 0) {
+                    hint_count--;
+                    printf("Hint: %.*s\n", (int)(strlen(correct_word) / 2), correct_word);  // Provide half of the word as a hint
+                } else {
+                    printf("No more hints available.\n");
+                }
+            } else if (strcmp(answer, correct_word) == 0) {
+                printf("- correct\n");
+                n_correct++;
+                break;
+            } else {
+                printf("- wrong: %s\n", correct_word);
+                save_incorrect(wordbook, correct_word, meaning);
                 break;
             }
-		}
-	}
-	while (cmd != C_EXIT) ;
+        }
+        n_questions++;
+        free(line);
+    }
 
+    printf("(%d/%d)\n", n_correct, n_questions);
 
-	return EXIT_SUCCESS ;
+    printf("-----\n\n");
+
+    fclose(fp);
+}
+
+void retest_incorrect() {
+    char wordbook[128];
+    char filepath[256];
+
+    list_wordbooks();
+
+    printf("Type in the name of the wordbook?\n");
+    printf(">");
+    scanf("%s", wordbook);
+
+    sprintf(filepath, "wordbooks/%s_incorrect.txt", wordbook);
+
+    FILE* fp = fopen(filepath, "r");
+    if (!fp) {
+        printf("No incorrect problems found for this wordbook.\n");
+        return;
+    }
+
+    printf("\n-----\n");
+
+    int n_questions = 0;
+    int n_correct = 0;
+    int hint_count = 3;  // Limit the number of hints provided
+
+    char* line;
+    while ((line = read_a_line(fp)) != NULL) {
+        char* word = strtok(line, "\"");
+        strtok(NULL, "\"");
+        char* meaning = strtok(NULL, "\"");
+
+        char correct_word[128];
+        strcpy(correct_word, word);
+
+        while (1) {
+            printf("Q. %s\n", meaning);
+            printf("?  ");
+
+            char answer[128];
+            scanf("%s", answer);
+
+            if (strcmp(answer, "hint") == 0) {
+                if (hint_count > 0) {
+                    hint_count--;
+                    printf("Hint: %.*s\n", (int)(strlen(correct_word) / 2), correct_word); // Provide half of the word as a hint
+                } else {
+                    printf("No more hints available.\n");
+                }
+            } else if (strcmp(answer, correct_word) == 0) {
+                printf("- correct\n");
+                n_correct++;
+                break;
+            } else {
+                printf("- wrong: %s\n", correct_word);
+                break;
+            }
+        }
+        n_questions++;
+        free(line);
+    }
+
+    printf("(%d/%d)\n", n_correct, n_questions);
+
+    printf("-----\n\n");
+
+    fclose(fp);
+}
+
+int main() {
+    printf(" *** Word Quiz *** \n\n");
+
+    int cmd;
+    do {
+        print_menu();
+
+        cmd = get_command();
+        switch (cmd) {
+            case C_LIST: {
+                list_wordbooks();
+                break;
+            }
+
+            case C_SHOW: {
+                show_words();
+                break;
+            }
+
+            case C_TEST: {
+                char wordbook[128];
+                list_wordbooks();
+                printf("Type in the name of the wordbook?\n");
+                printf(">");
+                scanf("%s", wordbook);
+                run_test(wordbook);
+                break;
+            }
+
+            case C_RETEST: {
+                retest_incorrect();
+                break;
+            }
+
+            case C_EXIT: {
+                return EXIT_SUCCESS;
+            }
+        }
+    } while (cmd != C_EXIT);
+
+    return EXIT_SUCCESS;
 }
