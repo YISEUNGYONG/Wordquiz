@@ -98,6 +98,7 @@ void show_words() {
     printf("Type in the name of the wordbook?\n");
     printf(">");
     scanf("%s", wordbook);
+/*when printing about getting the type of the wordbook, add available type of the word book. additionally add the example of typying method of word book.*/
 
     sprintf(filepath, "wordbooks/%s", wordbook);
 
