@@ -233,7 +233,7 @@ void retest_incorrect() {
                     hint_count--;
                     printf("Hint: %.*s\n", (int)(strlen(correct_word) / 2), correct_word); // Provide half of the word as a hint
                 } else {
-                    printf("No more hints available!\n");
+                    printf("No more hints available!!!\n");
                 }
             } else if (strcmp(answer, correct_word) == 0) {
                 printf("- correct\n");
