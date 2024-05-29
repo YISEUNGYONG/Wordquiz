@@ -1,2 +1,2 @@
 # wordquiz
-Word Quiz
+Word Quiz is a quiz prgoram about words.
