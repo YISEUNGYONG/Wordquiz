@@ -2,7 +2,7 @@
 Word Quiz is a quiz prgoram about words.
 
 
-# to play
+## to play
 
 start app and press 3 to play a word quiz
 
